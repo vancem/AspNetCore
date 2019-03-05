@@ -3,9 +3,11 @@
 
 using Microsoft.AspNetCore.E2ETesting;
 using ProjectTemplates.Tests.Helpers;
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
+[assembly: AssemblyFixture(typeof(SeleniumServerFixture))]
 namespace Templates.Test.SpaTemplateTest
 {
     public class ReactTemplateTest : SpaTemplateTestBase
@@ -15,8 +17,8 @@ namespace Templates.Test.SpaTemplateTest
         {
         }
 
-        [Fact(Skip="This test is flaky. Using https://github.com/aspnet/AspNetCore-Internal/issues/1745 to track re-enabling this.")]
-        public void ReactTemplate_Works_NetCore()
-            => SpaTemplateImpl("react");
+        [Fact]
+        public async Task ReactTemplate_Works_NetCore()
+            => await SpaTemplateImpl("react");
     }
 }
