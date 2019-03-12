@@ -59,11 +59,10 @@ namespace Microsoft.Extensions.DependencyInjection
 
         public void Configure(MvcOptions options)
         {
-            InsertBefore(
-                options.OutputFormatters,
-                "Microsoft.AspNetCore.Mvc.Formatters.JsonOutputFormatter",
-                new NewtonsoftJsonOutputFormatter(_jsonOptions.SerializerSettings, _charPool));
+            options.OutputFormatters.RemoveType<SystemTextJsonOutputFormatter>();
+            options.OutputFormatters.Add(new NewtonsoftJsonOutputFormatter(_jsonOptions.SerializerSettings, _charPool));
 
+            options.InputFormatters.RemoveType<SystemTextJsonInputFormatter>();
             // Register JsonPatchInputFormatter before JsonInputFormatter, otherwise
             // JsonInputFormatter would consume "application/json-patch+json" requests
             // before JsonPatchInputFormatter gets to see them.
@@ -76,9 +75,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 options,
                 _jsonOptions);
 
-            const string JsonInputFormatter = "Microsoft.AspNetCore.Mvc.Formatters.JsonInputFormatter";
-
-            InsertBefore(options.InputFormatters, JsonInputFormatter, jsonPatchInputFormatter);
+            options.InputFormatters.Add(jsonPatchInputFormatter);
 
             var jsonInputLogger = _loggerFactory.CreateLogger<NewtonsoftJsonInputFormatter>();
             var jsonInputFormatter = new NewtonsoftJsonInputFormatter(
@@ -89,28 +86,11 @@ namespace Microsoft.Extensions.DependencyInjection
                 options,
                 _jsonOptions);
 
-            InsertBefore(options.InputFormatters, JsonInputFormatter, jsonInputFormatter);
+            options.InputFormatters.Add(jsonInputFormatter);
             options.FormatterMappings.SetMediaTypeMappingForFormat("json", MediaTypeHeaderValues.ApplicationJson);
 
             options.ModelMetadataDetailsProviders.Add(new SuppressChildValidationMetadataProvider(typeof(IJsonPatchDocument)));
             options.ModelMetadataDetailsProviders.Add(new SuppressChildValidationMetadataProvider(typeof(JToken)));
-        }
-
-        private void InsertBefore<TFormatter>(
-            FormatterCollection<TFormatter> formatters,
-            string formatterName,
-            TFormatter formatter)
-        {
-            for (var i = 0; i < formatters.Count; i++)
-            {
-                if (formatters[i].GetType().FullName == formatterName)
-                {
-                    formatters.Insert(i, formatter);
-                    return;
-                }
-            }
-
-            formatters.Add(formatter);
         }
     }
 }

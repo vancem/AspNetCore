@@ -13,17 +13,17 @@ using Microsoft.AspNetCore.Mvc.Formatters.Json;
 namespace Microsoft.AspNetCore.Mvc.Formatters
 {
     /// <summary>
-    /// A <see cref="TextInputFormatter"/> for JSON content.
+    /// A <see cref="TextInputFormatter"/> for JSON content that uses <see cref="JsonSerializer"/>.
     /// </summary>
-    public sealed class JsonInputFormatter : TextInputFormatter, IInputFormatterExceptionPolicy
+    public class SystemTextJsonInputFormatter : TextInputFormatter, IInputFormatterExceptionPolicy
     {
         private readonly JsonSerializerOptions _serializerOptions;
 
         /// <summary>
-        /// Initializes a new instance of <see cref="JsonInputFormatter"/>.
+        /// Initializes a new instance of <see cref="SystemTextJsonInputFormatter"/>.
         /// </summary>
-        /// <param name="options">The <see cref="JsonFormatterOptions"/>.</param>
-        public JsonInputFormatter(JsonFormatterOptions options)
+        /// <param name="options">The <see cref="MvcOptions"/>.</param>
+        public SystemTextJsonInputFormatter(MvcOptions options)
         {
             _serializerOptions = options.SerializerOptions;
 
@@ -39,7 +39,7 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
         InputFormatterExceptionPolicy IInputFormatterExceptionPolicy.ExceptionPolicy => InputFormatterExceptionPolicy.MalformedInputExceptions;
 
         /// <inheritdoc />
-        public override async Task<InputFormatterResult> ReadRequestBodyAsync(
+        public sealed override async Task<InputFormatterResult> ReadRequestBodyAsync(
             InputFormatterContext context,
             Encoding encoding)
         {
@@ -56,23 +56,25 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
             var httpContext = context.HttpContext;
             var inputStream = GetInputStream(httpContext, encoding);
 
-            try
-            {
-                var result = await JsonSerializer.ReadAsync(inputStream, context.ModelType, _serializerOptions, httpContext.RequestAborted);
-                return InputFormatterResult.Success(result);
-            }
-            catch (JsonReaderException exception)
-            {
-                var inputException = new InputFormatterException(exception.Message, exception);
-                context.ModelState.TryAddModelException(key: string.Empty, inputException);
-            }
+            var model = await JsonSerializer.ReadAsync(inputStream, context.ModelType, _serializerOptions);
 
-            return InputFormatterResult.Failure();
+            if (model == null && !context.TreatEmptyInputAsDefaultValue)
+            {
+                // Some nonempty inputs might deserialize as null, for example whitespace,
+                // or the JSON-encoded value "null". The upstream BodyModelBinder needs to
+                // be notified that we don't regard this as a real input so it can register
+                // a model binding error.
+                return InputFormatterResult.NoValue();
+            }
+            else
+            {
+                return InputFormatterResult.Success(model);
+            }
         }
 
         private Stream GetInputStream(HttpContext httpContext, Encoding encoding)
         {
-            if (encoding == UTF8EncodingWithoutBOM || encoding == Encoding.UTF8)
+            if (encoding.CodePage == Encoding.UTF8.CodePage)
             {
                 return httpContext.Request.Body;
             }
