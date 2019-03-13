@@ -24,7 +24,7 @@ namespace Templates.Test
 
         public Project Project { get; }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/aspnet/AspNetCore/issues/8244")]
         public async Task RazorComponentsTemplateWorks()
         {
             Project.RunDotNetNew("razorcomponents");
