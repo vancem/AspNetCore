@@ -14,7 +14,7 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
     /// <summary>
     /// A <see cref="TextOutputFormatter"/> for JSON content that uses <see cref="JsonSerializer"/>.
     /// </summary>
-    public sealed class SystemTextJsonOutputFormatter : TextOutputFormatter
+    public class SystemTextJsonOutputFormatter : TextOutputFormatter
     {
         private readonly JsonSerializerOptions _serializerOptions;
 
@@ -34,7 +34,7 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
         }
 
         /// <inheritdoc />
-        public override async Task WriteResponseBodyAsync(OutputFormatterWriteContext context, Encoding selectedEncoding)
+        public sealed override async Task WriteResponseBodyAsync(OutputFormatterWriteContext context, Encoding selectedEncoding)
         {
             if (context == null)
             {
